@@ -12,19 +12,13 @@ func TestOlm(t *testing.T) {
 }
 
 func TestAccount(t *testing.T) {
-	a1, err := NewAccount()
-	if err != nil {
-		t.Error(err)
-	}
+	a1 := NewAccount()
 	//t.Log("Size():", a.Size())
-	pickled1, err := a1.Pickle([]byte("HELLO"))
-	if err != nil {
-		t.Error(err)
-	}
+	pickled1 := a1.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled1)
 
-	a11, _ := NewAccount()
-	pickled11, _ := a11.Pickle([]byte("HELLO"))
+	a11 := NewAccount()
+	pickled11 := a11.Pickle([]byte("HELLO"))
 	if pickled1 == pickled11 {
 		t.Error("Two new accounts pickle to the same string")
 	}
@@ -33,10 +27,7 @@ func TestAccount(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pickled2, err := a2.Pickle([]byte("HELLO"))
-	if err != nil {
-		t.Error(err)
-	}
+	pickled2 := a2.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled2)
 	a3, err := AccountFromPickled(pickled2, []byte("HELLO"))
 	if err != nil {
@@ -45,25 +36,13 @@ func TestAccount(t *testing.T) {
 	if pickled1 != pickled2 {
 		t.Error("pickle(unpickle(pickle)) != pickle")
 	}
-	identityKeys, err := a1.IdentityKeys()
-	if err != nil {
-		t.Error(err)
-	}
+	identityKeys := a1.IdentityKeys()
 	t.Log("IdentityKeys():", identityKeys)
-	signature, err := a1.Sign("HELLO WORLD")
-	if err != nil {
-		t.Error(err)
-	}
+	signature := a1.Sign("HELLO WORLD")
 	t.Log("a1.Sign():", signature)
 	maxNumberOfOneTimeKeys := a1.MaxNumberOfOneTimeKeys()
-	err = a1.GenOneTimeKeys(maxNumberOfOneTimeKeys)
-	if err != nil {
-		t.Error(err)
-	}
-	oneTimeKeys, err := a1.OneTimeKeys()
-	if err != nil {
-		t.Error(err)
-	}
+	a1.GenOneTimeKeys(maxNumberOfOneTimeKeys)
+	oneTimeKeys := a1.OneTimeKeys()
 	t.Log("a1.OneTimeKeys():", oneTimeKeys)
 	t.Log("a1.Clear():", a1.Clear())
 	t.Log("a2.Clear():", a2.Clear())
@@ -80,11 +59,11 @@ type IdentityKeys struct {
 }
 
 func TestSession(t *testing.T) {
-	a1, _ := NewAccount()
-	a2, _ := NewAccount()
+	a1 := NewAccount()
+	a2 := NewAccount()
 
 	a2.GenOneTimeKeys(a2.MaxNumberOfOneTimeKeys())
-	a2OneTimeKeysJSON, _ := a2.OneTimeKeys()
+	a2OneTimeKeysJSON := a2.OneTimeKeys()
 	var a2OneTimeKeys OneTimeKeys
 	json.Unmarshal([]byte(a2OneTimeKeysJSON), &a2OneTimeKeys)
 	//t.Log("Marshaled:", a2OneTimeKeysJSON)
@@ -96,7 +75,7 @@ func TestSession(t *testing.T) {
 		break
 	}
 
-	a2IdentityKeysJSON, _ := a2.IdentityKeys()
+	a2IdentityKeysJSON := a2.IdentityKeys()
 	var a2IdentityKeys IdentityKeys
 	json.Unmarshal([]byte(a2IdentityKeysJSON), &a2IdentityKeys)
 	t.Log("a2IdentityKeys:", a2IdentityKeys)

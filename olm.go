@@ -130,9 +130,14 @@ func (s *Session) Id() string {
 	}
 }
 
-// ???
-func (s *Session) HasReceivedMessage() int {
-	return int(C.olm_session_has_received_message((*C.OlmSession)(s)))
+// HasReceivedMessage returns true if this session has received any message.
+func (s *Session) HasReceivedMessage() bool {
+	switch C.olm_session_has_received_message((*C.OlmSession)(s)) {
+	case 0:
+		return false
+	default:
+		return true
+	}
 }
 
 // MatchesInboundSession checks if the PRE_KEY message is for this in-bound
@@ -387,7 +392,7 @@ func newAccount() *Account {
 }
 
 // NewAccount creates a new Account.
-func NewAccount() (*Account, error) {
+func NewAccount() *Account {
 	a := newAccount()
 	random := make([]byte, a.createRandomLen())
 	_, err := crand.Read(random)
@@ -399,7 +404,7 @@ func NewAccount() (*Account, error) {
 		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)))
 	if r == Error() {
-		return panic(a.lastError())
+		panic(a.lastError())
 	} else {
 		return a
 	}
@@ -413,7 +418,7 @@ func (a *Account) IdentityKeys() string {
 		unsafe.Pointer(&identityKeys[0]),
 		C.size_t(len(identityKeys)))
 	if r == Error() {
-		return panic(a.lastError())
+		panic(a.lastError())
 	} else {
 		return string(identityKeys)
 	}
@@ -455,7 +460,7 @@ func (a *Account) OneTimeKeys() string {
 		unsafe.Pointer(&oneTimeKeys[0]),
 		C.size_t(len(oneTimeKeys)))
 	if r == Error() {
-		return panic(a.lastError())
+		panic(a.lastError())
 	} else {
 		return string(oneTimeKeys)
 	}
