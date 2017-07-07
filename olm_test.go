@@ -105,10 +105,7 @@ func TestSession(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	pickled1, err := s1.Pickle([]byte("HELLO"))
-	if err != nil {
-		t.Error(err)
-	}
+	pickled1 := s1.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled1)
 }
 
