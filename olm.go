@@ -38,7 +38,7 @@ func (s *Session) lastError() error {
 	return fmt.Errorf("%s", C.GoString(C.olm_session_last_error((*C.OlmSession)(s))))
 }
 
-// Clear clears the memory used to back this session.
+// Clear clears the memory used to back this Session.
 func (s *Session) Clear() error {
 	r := C.olm_clear_session((*C.OlmSession)(s))
 	if r == Error() {
@@ -79,7 +79,7 @@ func (s *Session) encryptMsgLen(plainTextLen int) uint {
 
 // decryptMaxPlaintextLen returns the maximum number of bytes of plain-text a
 // given message could decode to.  The actual size could be different due to
-// padding. Returns error on failure.  If the message base64 couldn't be
+// padding.  Returns error on failure.  If the message base64 couldn't be
 // decoded then the error will be "INVALID_BASE64".  If the message is for an
 // unsupported version of the protocol then the error will be
 // "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then the error
@@ -97,7 +97,7 @@ func (s *Session) decryptMaxPlaintextLen(message string, msgType MsgType) (uint,
 	}
 }
 
-// Pickle returns a session as a base64 string. Encrypts the session using the
+// Pickle returns a Session as a base64 string.  Encrypts the Session using the
 // supplied key.
 func (s *Session) Pickle(key []byte) string {
 	pickled := make([]byte, s.pickleLen())
@@ -115,8 +115,8 @@ func (s *Session) Pickle(key []byte) string {
 	}
 }
 
-// Id returns an identifier for this session. Will be the same for both ends of
-// the conversation.
+// Id returns an identifier for this Session.  Will be the same for both ends
+// of the conversation.
 func (s *Session) Id() string {
 	id := make([]byte, s.idLen())
 	r := C.olm_session_id(
@@ -136,10 +136,10 @@ func (s *Session) HasReceivedMessage() int {
 }
 
 // MatchesInboundSession checks if the PRE_KEY message is for this in-bound
-// session.  This can happen if multiple messages are sent to this account
-// before this account sends a message in reply.  Returns true if the session
-// matches. Returns false if the session does not match.  Returns error on
-// failure. If the base64 couldn't be decoded then the error will be
+// Session.  This can happen if multiple messages are sent to this Account
+// before this Account sends a message in reply.  Returns true if the session
+// matches.  Returns false if the session does not match.  Returns error on
+// failure.  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".  If the message was for an unsupported protocol version
 // then the error will be "BAD_MESSAGE_VERSION".  If the message couldn't be
 // decoded then then the error will be "BAD_MESSAGE_FORMAT".
@@ -158,8 +158,8 @@ func (s *Session) MatchesInboundSession(oneTimeKeyMsg string) (bool, error) {
 }
 
 // MatchesInboundSessionFrom checks if the PRE_KEY message is for this in-bound
-// session.  This can happen if multiple messages are sent to this account
-// before this account sends a message in reply. Returns true if the session
+// Session.  This can happen if multiple messages are sent to this Account
+// before this Account sends a message in reply.  Returns true if the session
 // matches.  Returns false if the session does not match.  Returns error on
 // failure.  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".  If the message was for an unsupported protocol version
@@ -189,10 +189,10 @@ const (
 	MsgTypeMsg    MsgType = 1
 )
 
-// EncryptMsgType returns the type of the next message that Encrypt will return. Returns
-// MsgTypePreKey if the message will be a PRE_KEY message.
-// Returns MsgTypeMsg if the message will be a normal message.
-// Returns error on failure.
+// EncryptMsgType returns the type of the next message that Encrypt will
+// return.  Returns MsgTypePreKey if the message will be a PRE_KEY message.
+// Returns MsgTypeMsg if the message will be a normal message.  Returns error
+// on failure.
 func (s *Session) EncryptMsgType() (MsgType, error) {
 	switch C.olm_encrypt_message_type((*C.OlmSession)(s)) {
 	case C.size_t(MsgTypePreKey):
@@ -205,7 +205,7 @@ func (s *Session) EncryptMsgType() (MsgType, error) {
 	}
 }
 
-// Encrypt encrypts a message using the session. Returns the encrypted message
+// Encrypt encrypts a message using the Session.  Returns the encrypted message
 // as base64.
 func (s *Session) Encrypt(plaintext string) string {
 	random := make([]byte, s.encryptRandomLen())
@@ -229,8 +229,8 @@ func (s *Session) Encrypt(plaintext string) string {
 	}
 }
 
-// Decrypt decrypts a message using the session.  Returns the the plain-text on
-// success. Returns error on failure.  If the base64 couldn't be decoded then
+// Decrypt decrypts a message using the Session.  Returns the the plain-text on
+// success.  Returns error on failure.  If the base64 couldn't be decoded then
 // the error will be "INVALID_BASE64".  If the message is for an unsupported
 // version of the protocol then the error will be "BAD_MESSAGE_VERSION".  If
 // the message couldn't be decoded then the error will be BAD_MESSAGE_FORMAT".
@@ -256,9 +256,9 @@ func (s *Session) Decrypt(message string, msgType MsgType) (string, error) {
 	}
 }
 
-// SessionFromPickled loads a session from a pickled base64 string. Decrypts
-// the session using the supplied key. Returns error on failure. If the key
-// doesn't match the one used to encrypt the session then the error will be
+// SessionFromPickled loads a Session from a pickled base64 string.  Decrypts
+// the Session using the supplied key.  Returns error on failure.  If the key
+// doesn't match the one used to encrypt the Session then the error will be
 // "BAD_SESSION_KEY".  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".
 func SessionFromPickled(pickled string, key []byte) (*Session, error) {
@@ -276,7 +276,7 @@ func SessionFromPickled(pickled string, key []byte) (*Session, error) {
 	}
 }
 
-// newSession initialises an empty session object.
+// newSession initialises an empty Session.
 func newSession() *Session {
 	memory := make([]byte, sessionSize())
 	return (*Session)(C.olm_session(unsafe.Pointer(&memory[0])))
@@ -296,7 +296,7 @@ func (a *Account) lastError() error {
 	return fmt.Errorf("%s", C.GoString(C.olm_account_last_error((*C.OlmAccount)(a))))
 }
 
-// Clear clears the memory used to back this account.
+// Clear clears the memory used to back this Account.
 func (a *Account) Clear() error {
 	r := C.olm_clear_account((*C.OlmAccount)(a))
 	if r == Error() {
@@ -306,13 +306,13 @@ func (a *Account) Clear() error {
 	}
 }
 
-// pickleLen returns the number of bytes needed to store an account.
+// pickleLen returns the number of bytes needed to store an Account.
 func (a *Account) pickleLen() uint {
 	return uint(C.olm_pickle_account_length((*C.OlmAccount)(a)))
 }
 
 // createRandomLen returns the number of random bytes needed to create an
-// account.
+// Account.
 func (a *Account) createRandomLen() uint {
 	return uint(C.olm_create_account_random_length((*C.OlmAccount)(a)))
 }
@@ -342,7 +342,7 @@ func (a *Account) genOneTimeKeysRandomLen(num uint) uint {
 		C.size_t(num)))
 }
 
-// Pickle returns an account as a base64 string. Encrypts the account using the
+// Pickle returns an Account as a base64 string. Encrypts the Account using the
 // supplied key.
 func (a *Account) Pickle(key []byte) string {
 	pickled := make([]byte, a.pickleLen())
@@ -359,9 +359,9 @@ func (a *Account) Pickle(key []byte) string {
 	}
 }
 
-// AccountFromPickled loads an account from a pickled base64 string. Decrypts
-// the account using the supplied key. Returns error on failure. If the key
-// doesn't match the one used to encrypt the account then the error will be
+// AccountFromPickled loads an Account from a pickled base64 string.  Decrypts
+// the Account using the supplied key.  Returns error on failure.  If the key
+// doesn't match the one used to encrypt the Account then the error will be
 // "BAD_ACCOUNT_KEY".  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".
 func AccountFromPickled(pickled string, key []byte) (*Account, error) {
@@ -380,13 +380,13 @@ func AccountFromPickled(pickled string, key []byte) (*Account, error) {
 	}
 }
 
-// newAccount initialises an empty account object.
+// newAccount initialises an empty Account.
 func newAccount() *Account {
 	memory := make([]byte, accountSize())
 	return (*Account)(C.olm_account(unsafe.Pointer(&memory[0])))
 }
 
-// NewAccount creates a new account.
+// NewAccount creates a new Account.
 func NewAccount() (*Account, error) {
 	a := newAccount()
 	random := make([]byte, a.createRandomLen())
@@ -405,7 +405,7 @@ func NewAccount() (*Account, error) {
 	}
 }
 
-// IdentityKeys returns the public parts of the identity keys for the account.
+// IdentityKeys returns the public parts of the identity keys for the Account.
 func (a *Account) IdentityKeys() string {
 	identityKeys := make([]byte, a.identityKeysLen())
 	r := C.olm_account_identity_keys(
@@ -420,7 +420,7 @@ func (a *Account) IdentityKeys() string {
 }
 
 // Sign returns the signature of a message using the ed25519 key for this
-// account.
+// Account.
 func (a *Account) Sign(message string) string {
 	signature := make([]byte, a.signatureLen())
 	r := C.olm_account_sign(
@@ -437,11 +437,11 @@ func (a *Account) Sign(message string) string {
 }
 
 // OneTimeKeys returns the public parts of the unpublished one time keys for
-// the account.
+// the Account.
 //
 // The returned data is a JSON-formatted object with the single property
 // "curve25519", which is itself an object mapping key id to base64-encoded
-// Curve25519 key. For example:
+// Curve25519 key.  For example:
 // 	{
 // 	    curve25519: {
 // 	        "AAAAAA": "wo76WcYtb0Vk/pBOdmduiGJ0wIEjW4IBMbbQn7aSnTo",
@@ -461,25 +461,26 @@ func (a *Account) OneTimeKeys() string {
 	}
 }
 
-/** Marks the current set of one time keys as being published. */
+// MarkKeysAsPublished marks the current set of one time keys as being
+// published.
 func (a *Account) MarkKeysAsPublished() {
 	C.olm_account_mark_keys_as_published((*C.OlmAccount)(a))
 }
 
-/** The largest number of one time keys this account can store. */
+// MaxNumberOfOneTimeKeys returns the largest number of one time keys this
+// Account can store.
 func (a *Account) MaxNumberOfOneTimeKeys() uint {
 	return uint(C.olm_account_max_number_of_one_time_keys((*C.OlmAccount)(a)))
 }
 
-/** Generates a number of new one time keys. If the total number of keys stored
- * by this account exceeds max_number_of_one_time_keys() then the old keys are
- * discarded. Returns olm_error() on error. If the number of random bytes is
- * too small then olm_account_last_error() will be "NOT_ENOUGH_RANDOM". */
-func (a *Account) GenOneTimeKeys(num uint) error {
+// GenOneTimeKeys generates a number of new one time keys.  If the total number
+// of keys stored by this Account exceeds MaxNumberOfOneTimeKeys then the old
+// keys are discarded.
+func (a *Account) GenOneTimeKeys(num uint) {
 	random := make([]byte, a.genOneTimeKeysRandomLen(num))
 	_, err := crand.Read(random)
 	if err != nil {
-		return fmt.Errorf("Couldn't get enough randomness from crypto/rand")
+		panic("Couldn't get enough randomness from crypto/rand")
 	}
 	r := C.olm_account_generate_one_time_keys(
 		(*C.OlmAccount)(a),
@@ -487,23 +488,19 @@ func (a *Account) GenOneTimeKeys(num uint) error {
 		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)))
 	if r == Error() {
-		return a.lastError()
-	} else {
-		return nil
+		panic(a.lastError())
 	}
 }
 
-/** Creates a new out-bound session for sending messages to a given identity_key
- * and one_time_key. Returns olm_error() on failure. If the keys couldn't be
- * decoded as base64 then the error will be "INVALID_BASE64"
- * If there weren't enough random bytes then the error will
- * be "NOT_ENOUGH_RANDOM". */
+// NewOutboundSession creates a new out-bound session for sending messages to a
+// given identityKey and oneTimeKey.  Returns error on failure.  If the keys
+// couldn't be decoded as base64 then the error will be "INVALID_BASE64"
 func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (*Session, error) {
 	s := newSession()
 	random := make([]byte, s.createOutboundRandomLen())
 	_, err := crand.Read(random)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't get enough randomness from crypto/rand")
+		panic("Couldn't get enough randomness from crypto/rand")
 	}
 	r := C.olm_create_outbound_session(
 		(*C.OlmSession)(s),
@@ -521,14 +518,13 @@ func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (
 	}
 }
 
-/** Create a new in-bound session for sending/receiving messages from an
- * incoming PRE_KEY message. Returns olm_error() on failure. If the base64
- * couldn't be decoded then the error will be "INVALID_BASE64".
- * If the message was for an unsupported protocol version then
- * the error will be "BAD_MESSAGE_VERSION". If the message
- * couldn't be decoded then then the error will be
- * "BAD_MESSAGE_FORMAT". If the message refers to an unknown one time
- * key then the error will be "BAD_MESSAGE_KEY_ID". */
+// NewInboundSession creates a new in-bound session for sending/receiving
+// messages from an incoming PRE_KEY message.  Returns error on failure.  If
+// the base64 couldn't be decoded then the error will be "INVALID_BASE64".  If
+// the message was for an unsupported protocol version then the error will be
+// "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then then the
+// error will be "BAD_MESSAGE_FORMAT".  If the message refers to an unknown one
+// time key then the error will be "BAD_MESSAGE_KEY_ID".
 func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
 	s := newSession()
 	r := C.olm_create_inbound_session(
@@ -543,14 +539,13 @@ func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
 	}
 }
 
-/** Create a new in-bound session for sending/receiving messages from an
- * incoming PRE_KEY message. Returns olm_error() on failure. If the base64
- * couldn't be decoded then the error will be "INVALID_BASE64".
- * If the message was for an unsupported protocol version then
- * the error will be "BAD_MESSAGE_VERSION". If the message
- * couldn't be decoded then then the error will be
- * "BAD_MESSAGE_FORMAT". If the message refers to an unknown one time
- * key then the error will be "BAD_MESSAGE_KEY_ID". */
+// NewInboundSessionFrom creates a new in-bound session for sending/receiving
+// messages from an incoming PRE_KEY message.  Returns error on failure.  If
+// the base64 couldn't be decoded then the error will be "INVALID_BASE64".  If
+// the message was for an unsupported protocol version then the error will be
+// "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then then the
+// error will be "BAD_MESSAGE_FORMAT".  If the message refers to an unknown one
+// time key then the error will be "BAD_MESSAGE_KEY_ID".
 func (a *Account) NewInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) (*Session, error) {
 	s := newSession()
 	r := C.olm_create_inbound_session_from(
@@ -567,9 +562,9 @@ func (a *Account) NewInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) 
 	}
 }
 
-/** Removes the one time keys that the session used from the account. Returns
- * olm_error() on failure. If the account doesn't have any matching one time
- * keys then olm_account_last_error() will be "BAD_MESSAGE_KEY_ID". */
+// RemoveOneTimeKeys removes the one time keys that the session used from the
+// Account.  Returns error on failure.  If the Account doesn't have any
+// matching one time keys then the error will be "BAD_MESSAGE_KEY_ID".
 func (a *Account) RemoveOneTimeKeys(s *Session) error {
 	r := C.olm_remove_one_time_keys(
 		(*C.OlmAccount)(a),
@@ -581,25 +576,27 @@ func (a *Account) RemoveOneTimeKeys(s *Session) error {
 	}
 }
 
+// Session stores the necessary state to perform hash and signature
+// verification operations.
 type Utility C.OlmUtility
 
-/** The size of a utility object in bytes */
+// utilitySize returns the size of a utility object in bytes.
 func utilitySize() uint {
 	return uint(C.olm_utility_size())
 }
 
-/** The length of the buffer needed to hold the SHA-256 hash. */
+// sha256Len returns the length of the buffer needed to hold the SHA-256 hash.
 func (u *Utility) sha256Len() uint {
 	return uint(C.olm_sha256_length((*C.OlmUtility)(u)))
 }
 
-/** A null terminated string describing the most recent error to happen to a
- * utility */
+// lastError returns an error describing the most recent error to happen to a
+// utility.
 func (u *Utility) lastError() error {
 	return fmt.Errorf("%s", C.olm_utility_last_error((*C.OlmUtility)(u)))
 }
 
-/** Clears the memory used to back this utility */
+// Clear clears the memory used to back this utility.
 func (u *Utility) Clear() error {
 	r := C.olm_clear_utility((*C.OlmUtility)(u))
 	if r == Error() {
@@ -609,18 +606,15 @@ func (u *Utility) Clear() error {
 	}
 }
 
-/** Initialise a utility object using the supplied memory
- *  The supplied memory must be at least olm_utility_size() bytes */
+// NewUtility creates a new utility.
 func NewUtility() *Utility {
 	memory := make([]byte, utilitySize())
 	//(*C.OlmAccount)(a).memory = unsafe.Pointer(&memory[0])
 	return (*Utility)(C.olm_utility(unsafe.Pointer(&memory[0])))
 }
 
-/** Calculates the SHA-256 hash of the input and encodes it as base64. If the
- * output buffer is smaller than olm_sha256_length() then
- * the error will be "OUTPUT_BUFFER_TOO_SMALL". */
-func (u *Utility) Sha256(input string) (string, error) {
+// Sha256 calculates the SHA-256 hash of the input and encodes it as base64.
+func (u *Utility) Sha256(input string) string {
 	output := make([]byte, u.sha256Len())
 	r := C.olm_sha256(
 		(*C.OlmUtility)(u),
@@ -629,15 +623,15 @@ func (u *Utility) Sha256(input string) (string, error) {
 		unsafe.Pointer(&([]byte(output)[0])),
 		C.size_t(len(output)))
 	if r == Error() {
-		return "", u.lastError()
+		panic(u.lastError())
 	} else {
-		return string(output), nil
+		return string(output)
 	}
 }
 
-/** Verify an ed25519 signature. If the key was too small then
- * the error will be "INVALID_BASE64". If the signature was invalid
- * then the error will be "BAD_MESSAGE_MAC". */
+// Ed25519 verifies an ed25519 signature.  Returns true if the verification
+// suceeds or false otherwise.  Returns error on failure.  If the key was too
+// small then the error will be "INVALID_BASE64".
 func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
 	r := C.olm_ed25519_verify(
 		(*C.OlmUtility)(u),
