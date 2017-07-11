@@ -13,7 +13,6 @@ func TestOlm(t *testing.T) {
 
 func TestAccount(t *testing.T) {
 	a1 := NewAccount()
-	//t.Log("Size():", a.Size())
 	pickled1 := a1.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled1)
 
@@ -44,6 +43,10 @@ func TestAccount(t *testing.T) {
 	a1.GenOneTimeKeys(maxNumberOfOneTimeKeys)
 	oneTimeKeys := a1.OneTimeKeys()
 	t.Log("a1.OneTimeKeys():", oneTimeKeys)
+
+	message := "HELLO WORLD"
+	s := a1.Sign(message)
+	t.Logf("Sign(\"%s\"): %s", message, s)
 	t.Log("a1.Clear():", a1.Clear())
 	t.Log("a2.Clear():", a2.Clear())
 	t.Log("a3.Clear():", a3.Clear())
@@ -89,6 +92,28 @@ func TestSession(t *testing.T) {
 }
 
 func TestUtility(t *testing.T) {
-	//var olmUtility Utility
-	//t.Log("Size():", olmUtility.Size())
+	u := NewUtility()
+	h := u.Sha256("HELLO")
+	t.Log("Sha256():", h)
+	if h != "NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU" {
+		t.Error("Sha256 doesn't match")
+	}
+	message := "HELLO WORLD"
+	key := "TdbnI8JjtbJW1h9dISHcZ7LTpMYIjKFiEBfKp8hxCeI"
+	signature := "h6SV3IO8S0sOMyvUvgbQcLaPkP0utyXDFHMrAVoLZl87JG3z8thYo9L1jHusXtP+fXM9NB7E2p06udpmtIPHAQ"
+	ok, err := u.Ed25519Verify(message, key, signature)
+	if err != nil {
+		t.Error(err)
+	}
+	if !ok {
+		t.Log("Signature verification shouldn't have failed")
+	}
+	message = "GOOD BYE"
+	ok, err = u.Ed25519Verify(message, key, signature)
+	if err != nil {
+		t.Error(err)
+	}
+	if ok {
+		t.Log("Signature verification should have failed")
+	}
 }

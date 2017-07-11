@@ -117,7 +117,7 @@ func (s *Session) Pickle(key []byte) string {
 
 // Id returns an identifier for this Session.  Will be the same for both ends
 // of the conversation.
-func (s *Session) Id() string {
+func (s *Session) ID() string {
 	id := make([]byte, s.idLen())
 	r := C.olm_session_id(
 		(*C.OlmSession)(s),
@@ -198,39 +198,40 @@ const (
 // return.  Returns MsgTypePreKey if the message will be a PRE_KEY message.
 // Returns MsgTypeMsg if the message will be a normal message.  Returns error
 // on failure.
-func (s *Session) EncryptMsgType() (MsgType, error) {
+func (s *Session) EncryptMsgType() MsgType {
 	switch C.olm_encrypt_message_type((*C.OlmSession)(s)) {
 	case C.size_t(MsgTypePreKey):
-		return MsgTypePreKey, nil
+		return MsgTypePreKey
 	case C.size_t(MsgTypeMsg):
-		return MsgTypeMsg, nil
+		return MsgTypeMsg
 	default:
-		//panic("olm_encrypt_message_type returned invalid result")
-		return MsgTypePreKey, s.lastError()
+		panic("olm_encrypt_message_type returned invalid result")
 	}
 }
 
 // Encrypt encrypts a message using the Session.  Returns the encrypted message
 // as base64.
-func (s *Session) Encrypt(plaintext string) string {
-	random := make([]byte, s.encryptRandomLen())
+func (s *Session) Encrypt(plaintext string) (MsgType, string) {
+	// FIXME: Allow slices to be of zero length!
+	random := make([]byte, s.encryptRandomLen()+1)
 	_, err := crand.Read(random)
 	if err != nil {
 		panic("Couldn't get enough randomness from crypto/rand")
 	}
+	messageType := s.EncryptMsgType()
 	message := make([]byte, s.encryptMsgLen(len(plaintext)))
 	r := C.olm_encrypt(
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&([]byte(plaintext))[0]),
 		C.size_t(len(plaintext)),
-		unsafe.Pointer(&(random)[0]),
+		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)),
 		unsafe.Pointer(&([]byte(message))[0]),
 		C.size_t(len(message)))
 	if r == Error() {
 		panic(s.lastError())
 	} else {
-		return string(message)
+		return messageType, string(message)
 	}
 }
 
@@ -598,7 +599,7 @@ func (u *Utility) sha256Len() uint {
 // lastError returns an error describing the most recent error to happen to a
 // utility.
 func (u *Utility) lastError() error {
-	return fmt.Errorf("%s", C.olm_utility_last_error((*C.OlmUtility)(u)))
+	return fmt.Errorf("%s", C.GoString(C.olm_utility_last_error((*C.OlmUtility)(u))))
 }
 
 // Clear clears the memory used to back this utility.
