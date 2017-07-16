@@ -85,6 +85,9 @@ func (s *Session) encryptMsgLen(plainTextLen int) uint {
 // "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then the error
 // will be "BAD_MESSAGE_FORMAT".
 func (s *Session) decryptMaxPlaintextLen(message string, msgType MsgType) (uint, error) {
+	if len(message) == 0 {
+		return 0, fmt.Errorf("Empty input")
+	}
 	r := C.olm_decrypt_max_plaintext_length(
 		(*C.OlmSession)(s),
 		C.size_t(msgType),
@@ -100,6 +103,9 @@ func (s *Session) decryptMaxPlaintextLen(message string, msgType MsgType) (uint,
 // Pickle returns a Session as a base64 string.  Encrypts the Session using the
 // supplied key.
 func (s *Session) Pickle(key []byte) string {
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
 	pickled := make([]byte, s.pickleLen())
 	r := C.olm_pickle_session(
 		(*C.OlmSession)(s),
@@ -149,6 +155,9 @@ func (s *Session) HasReceivedMessage() bool {
 // then the error will be "BAD_MESSAGE_VERSION".  If the message couldn't be
 // decoded then then the error will be "BAD_MESSAGE_FORMAT".
 func (s *Session) MatchesInboundSession(oneTimeKeyMsg string) (bool, error) {
+	if len(oneTimeKeyMsg) == 0 {
+		return false, fmt.Errorf("Empty input")
+	}
 	r := C.olm_matches_inbound_session(
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&([]byte(oneTimeKeyMsg))[0]),
@@ -171,6 +180,9 @@ func (s *Session) MatchesInboundSession(oneTimeKeyMsg string) (bool, error) {
 // then the error will be "BAD_MESSAGE_VERSION".  If the message couldn't be
 // decoded then then the error will be "BAD_MESSAGE_FORMAT".
 func (s *Session) MatchesInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) (bool, error) {
+	if len(theirIdentityKey) == 0 || len(oneTimeKeyMsg) == 0 {
+		return false, fmt.Errorf("Empty input")
+	}
 	r := C.olm_matches_inbound_session_from(
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&([]byte(theirIdentityKey))[0]),
@@ -212,7 +224,10 @@ func (s *Session) EncryptMsgType() MsgType {
 // Encrypt encrypts a message using the Session.  Returns the encrypted message
 // as base64.
 func (s *Session) Encrypt(plaintext string) (MsgType, string) {
-	// FIXME: Allow slices to be of zero length!
+	if len(plaintext) == 0 {
+		plaintext = " "
+	}
+	// Make the slice be at least length 1
 	random := make([]byte, s.encryptRandomLen()+1)
 	_, err := crand.Read(random)
 	if err != nil {
@@ -243,6 +258,9 @@ func (s *Session) Encrypt(plaintext string) (MsgType, string) {
 // If the MAC on the message was invalid then the error will be
 // "BAD_MESSAGE_MAC".
 func (s *Session) Decrypt(message string, msgType MsgType) (string, error) {
+	if len(message) == 0 {
+		return "", fmt.Errorf("Empty input")
+	}
 	decryptMaxPlaintextLen, err := s.decryptMaxPlaintextLen(message, msgType)
 	if err != nil {
 		return "", err
@@ -268,6 +286,12 @@ func (s *Session) Decrypt(message string, msgType MsgType) (string, error) {
 // "BAD_SESSION_KEY".  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".
 func SessionFromPickled(pickled string, key []byte) (*Session, error) {
+	if len(pickled) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
 	s := newSession()
 	r := C.olm_unpickle_session(
 		(*C.OlmSession)(s),
@@ -351,6 +375,9 @@ func (a *Account) genOneTimeKeysRandomLen(num uint) uint {
 // Pickle returns an Account as a base64 string. Encrypts the Account using the
 // supplied key.
 func (a *Account) Pickle(key []byte) string {
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
 	pickled := make([]byte, a.pickleLen())
 	r := C.olm_pickle_account(
 		(*C.OlmAccount)(a),
@@ -371,7 +398,12 @@ func (a *Account) Pickle(key []byte) string {
 // "BAD_ACCOUNT_KEY".  If the base64 couldn't be decoded then the error will be
 // "INVALID_BASE64".
 func AccountFromPickled(pickled string, key []byte) (*Account, error) {
-	//var a *Account
+	if len(pickled) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
 	a := newAccount()
 	r := C.olm_unpickle_account(
 		(*C.OlmAccount)(a),
@@ -395,7 +427,7 @@ func newAccount() *Account {
 // NewAccount creates a new Account.
 func NewAccount() *Account {
 	a := newAccount()
-	random := make([]byte, a.createRandomLen())
+	random := make([]byte, a.createRandomLen()+1)
 	_, err := crand.Read(random)
 	if err != nil {
 		panic("Couldn't get enough randomness from crypto/rand")
@@ -428,6 +460,9 @@ func (a *Account) IdentityKeys() string {
 // Sign returns the signature of a message using the ed25519 key for this
 // Account.
 func (a *Account) Sign(message string) string {
+	if len(message) == 0 {
+		message = " "
+	}
 	signature := make([]byte, a.signatureLen())
 	r := C.olm_account_sign(
 		(*C.OlmAccount)(a),
@@ -483,7 +518,7 @@ func (a *Account) MaxNumberOfOneTimeKeys() uint {
 // of keys stored by this Account exceeds MaxNumberOfOneTimeKeys then the old
 // keys are discarded.
 func (a *Account) GenOneTimeKeys(num uint) {
-	random := make([]byte, a.genOneTimeKeysRandomLen(num))
+	random := make([]byte, a.genOneTimeKeysRandomLen(num)+1)
 	_, err := crand.Read(random)
 	if err != nil {
 		panic("Couldn't get enough randomness from crypto/rand")
@@ -502,8 +537,11 @@ func (a *Account) GenOneTimeKeys(num uint) {
 // given identityKey and oneTimeKey.  Returns error on failure.  If the keys
 // couldn't be decoded as base64 then the error will be "INVALID_BASE64"
 func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (*Session, error) {
+	if len(theirIdentityKey) == 0 || len(theirOneTimeKey) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
 	s := newSession()
-	random := make([]byte, s.createOutboundRandomLen())
+	random := make([]byte, s.createOutboundRandomLen()+1)
 	_, err := crand.Read(random)
 	if err != nil {
 		panic("Couldn't get enough randomness from crypto/rand")
@@ -532,6 +570,9 @@ func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (
 // error will be "BAD_MESSAGE_FORMAT".  If the message refers to an unknown one
 // time key then the error will be "BAD_MESSAGE_KEY_ID".
 func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
+	if len(oneTimeKeyMsg) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
 	s := newSession()
 	r := C.olm_create_inbound_session(
 		(*C.OlmSession)(s),
@@ -553,6 +594,9 @@ func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
 // error will be "BAD_MESSAGE_FORMAT".  If the message refers to an unknown one
 // time key then the error will be "BAD_MESSAGE_KEY_ID".
 func (a *Account) NewInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) (*Session, error) {
+	if len(theirIdentityKey) == 0 || len(oneTimeKeyMsg) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
 	s := newSession()
 	r := C.olm_create_inbound_session_from(
 		(*C.OlmSession)(s),
@@ -621,6 +665,9 @@ func NewUtility() *Utility {
 
 // Sha256 calculates the SHA-256 hash of the input and encodes it as base64.
 func (u *Utility) Sha256(input string) string {
+	if len(input) == 0 {
+		input = " "
+	}
 	output := make([]byte, u.sha256Len())
 	r := C.olm_sha256(
 		(*C.OlmUtility)(u),
@@ -639,6 +686,9 @@ func (u *Utility) Sha256(input string) string {
 // suceeds or false otherwise.  Returns error on failure.  If the key was too
 // small then the error will be "INVALID_BASE64".
 func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
+	if len(message) == 0 || len(key) == 0 || len(signature) == 0 {
+		return false, fmt.Errorf("Empty input")
+	}
 	r := C.olm_ed25519_verify(
 		(*C.OlmUtility)(u),
 		unsafe.Pointer(&([]byte(key)[0])),
