@@ -2,6 +2,7 @@ package olm
 
 // #cgo LDFLAGS: -lolm -lstdc++
 // #include <olm/olm.h>
+// #include <olm/outbound_group_session.h>
 import "C"
 
 import (
@@ -706,5 +707,185 @@ func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
 		}
 	} else {
 		return true, nil
+	}
+}
+
+// OutboundGroupSession stores an outbound encrypted messaging session for a
+// group.
+type OutboundGroupSession C.OlmOutboundGroupSession
+
+// outboundGroupSessionSize is the size of an outbound group session object in
+// bytes.
+func outboundGroupSessionSize() uint {
+	return uint(C.olm_outbound_group_session_size())
+}
+
+// newOutboundGroupSession initialises an empty OutboundGroupSession.
+func newOutboundGroupSession() *OutboundGroupSession {
+	memory := make([]byte, outboundGroupSessionSize())
+	return (*OutboundGroupSession)(C.olm_outbound_group_session(unsafe.Pointer(&memory[0])))
+}
+
+// lastError returns an error describing the most recent error to happen to an
+// outbound group session.
+func (s *OutboundGroupSession) lastError() error {
+	return fmt.Errorf("%s", C.GoString(C.olm_outbound_group_session_last_error((*C.OlmOutboundGroupSession)(s))))
+}
+
+// Clear clears the memory used to back this OutboundGroupSession.
+func (s *OutboundGroupSession) Clear() error {
+	r := C.olm_clear_outbound_group_session((*C.OlmOutboundGroupSession)(s))
+	if r == Error() {
+		return s.lastError()
+	} else {
+		return nil
+	}
+}
+
+// pickleLen returns the number of bytes needed to store an outbound group
+// session.
+func (s *OutboundGroupSession) pickleLen() uint {
+	return uint(C.olm_pickle_outbound_group_session_length((*C.OlmOutboundGroupSession)(s)))
+}
+
+// Pickle returns an OutboundGroupSession as a base64 string.  Encrypts the
+// OutboundGroupSession using the supplied key.
+func (s *OutboundGroupSession) Pickle(key []byte) string {
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
+	pickled := make([]byte, s.pickleLen())
+	r := C.olm_pickle_outbound_group_session(
+		(*C.OlmOutboundGroupSession)(s),
+		unsafe.Pointer(&key[0]),
+		//unsafe.Pointer(key),
+		C.size_t(len(key)),
+		unsafe.Pointer(&pickled[0]),
+		C.size_t(len(pickled)))
+	if r == Error() {
+		panic(s.lastError())
+	} else {
+		return string(pickled)
+	}
+}
+
+// OutboundGroupSessionFromPickled loads an OutboundGroupSession from a pickled
+// base64 string.  Decrypts the OutboundGroupSession using the supplied key.
+// Returns error on failure.  If the key doesn't match the one used to encrypt
+// the OutboundGroupSession then the error will be "BAD_SESSION_KEY".  If the
+// base64 couldn't be decoded then the error will be "INVALID_BASE64".
+func OutboundGroupSessionFromPickled(pickled string, key []byte) (*OutboundGroupSession, error) {
+	if len(pickled) == 0 {
+		return nil, fmt.Errorf("Empty input")
+	}
+	if len(key) == 0 {
+		key = []byte(" ")
+	}
+	s := newOutboundGroupSession()
+	r := C.olm_unpickle_outbound_group_session(
+		(*C.OlmOutboundGroupSession)(s),
+		unsafe.Pointer(&key[0]),
+		C.size_t(len(key)),
+		unsafe.Pointer(&([]byte(pickled))[0]),
+		C.size_t(len(pickled)))
+	if r == Error() {
+		return nil, s.lastError()
+	} else {
+		return s, nil
+	}
+}
+
+// createRandomLen returns the number of random bytes needed to create an
+// Account.
+func (s *OutboundGroupSession) createRandomLen() uint {
+	return uint(C.olm_init_outbound_group_session_random_length((*C.OlmOutboundGroupSession)(s)))
+}
+
+// NewOutboundGroupSession creates a new outbound group session.
+func NewOutboundGroupSession() *OutboundGroupSession {
+	s := newOutboundGroupSession()
+	random := make([]byte, s.createRandomLen()+1)
+	_, err := crand.Read(random)
+	if err != nil {
+		panic("Couldn't get enough randomness from crypto/rand")
+	}
+	r := C.olm_init_outbound_group_session(
+		(*C.OlmOutboundGroupSession)(s),
+		(*C.uint8_t)(&random[0]),
+		C.size_t(len(random)))
+	if r == Error() {
+		panic(s.lastError())
+	} else {
+		return s
+	}
+}
+
+// encryptMsgLen returns the size of the next message in bytes for the given
+// number of plain-text bytes.
+func (s *OutboundGroupSession) encryptMsgLen(plainTextLen int) uint {
+	return uint(C.olm_group_encrypt_message_length((*C.OlmOutboundGroupSession)(s), C.size_t(plainTextLen)))
+}
+
+// Encrypt encrypts a message using the Session.  Returns the encrypted message
+// as base64.
+func (s *OutboundGroupSession) Encrypt(plaintext string) string {
+	if len(plaintext) == 0 {
+		plaintext = " "
+	}
+	message := make([]byte, s.encryptMsgLen(len(plaintext)))
+	r := C.olm_group_encrypt(
+		(*C.OlmOutboundGroupSession)(s),
+		(*C.uint8_t)(&([]byte(plaintext))[0]),
+		C.size_t(len(plaintext)),
+		(*C.uint8_t)(&([]byte(message))[0]),
+		C.size_t(len(message)))
+	if r == Error() {
+		panic(s.lastError())
+	} else {
+		return string(message)
+	}
+}
+
+// sessionIdLen returns the number of bytes needed to store a session ID.
+func (s *OutboundGroupSession) sessionIdLen() uint {
+	return uint(C.olm_outbound_group_session_id_length((*C.OlmOutboundGroupSession)(s)))
+}
+
+// SessionId returns a base64-encoded identifier for this session.
+func (s *OutboundGroupSession) SessionId() string {
+	sessionId := make([]byte, s.sessionIdLen())
+	r := C.olm_outbound_group_session_id(
+		(*C.OlmOutboundGroupSession)(s),
+		(*C.uint8_t)(&sessionId[0]),
+		C.size_t(len(sessionId)))
+	if r == Error() {
+		panic(s.lastError())
+	} else {
+		return string(sessionId)
+	}
+}
+
+// MessageIndex returns the message index for this session.  Each message is
+// sent with an increasing index; this returns the index for the next message.
+func (s *OutboundGroupSession) MessageIndex() uint {
+	return uint(C.olm_outbound_group_session_message_index((*C.OlmOutboundGroupSession)(s)))
+}
+
+// sessionKeyLen returns the number of bytes needed to store a session key.
+func (s *OutboundGroupSession) sessionKeyLen() uint {
+	return uint(C.olm_outbound_group_session_key_length((*C.OlmOutboundGroupSession)(s)))
+}
+
+// SessionKey returns the base64-encoded current ratchet key for this session.
+func (s *OutboundGroupSession) SessionKey() string {
+	sessionKey := make([]byte, s.sessionKeyLen())
+	r := C.olm_outbound_group_session_key(
+		(*C.OlmOutboundGroupSession)(s),
+		(*C.uint8_t)(&sessionKey[0]),
+		C.size_t(len(sessionKey)))
+	if r == Error() {
+		panic(s.lastError())
+	} else {
+		return string(sessionKey)
 	}
 }
