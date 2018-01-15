@@ -27,7 +27,7 @@ func TestAccount(t *testing.T) {
 	// Load account from pickled account
 	a2, err := AccountFromPickled(pickled1, []byte("HELLO"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	// Pickle again to verify that we get the same as before
 	pickled2 := a2.Pickle([]byte("HELLO"))
@@ -93,6 +93,7 @@ func TestSession(t *testing.T) {
 	a2IdentityKeysJSON := a2.IdentityKeys()
 	var a2IdentityKeys IdentityKeys
 	json.Unmarshal([]byte(a2IdentityKeysJSON), &a2IdentityKeys)
+	t.Log("a2IdentityKeysJSON:", a2IdentityKeysJSON)
 	t.Log("a2IdentityKeys:", a2IdentityKeys)
 	t.Log("a2OneTimeKey:", a2OneTimeKey)
 
@@ -103,6 +104,31 @@ func TestSession(t *testing.T) {
 	}
 	pickled1 := s1.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled1)
+
+	// From account 1, encrypt a message to account 2
+	msg1 := "OLA K ASE"
+	msgType, encMsg := s1.Encrypt(msg1)
+	t.Log("s1.Encrypt(\"", msg1, "\"):", msgType, encMsg)
+
+	// Get identity key of account 1
+	a1IdentityKeysJSON := a1.IdentityKeys()
+	var a1IdentityKeys IdentityKeys
+	json.Unmarshal([]byte(a1IdentityKeysJSON), &a1IdentityKeys)
+	t.Log("a1IdentityKeysJSON:", a1IdentityKeysJSON)
+	t.Log("a1IdentityKeys:", a1IdentityKeys)
+
+	s2, err := a2.NewInboundSessionFrom(a1IdentityKeys.Curve25519, encMsg)
+	//s2, err := a2.NewInboundSession(encMsg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg2, err := s2.Decrypt(encMsg, msgType)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log("s1.Decrypt():", msg2)
+	t.Log(s1.Pickle([]byte(" ")))
 }
 
 func TestUtility(t *testing.T) {

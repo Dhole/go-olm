@@ -3,6 +3,8 @@ package olm
 // #cgo LDFLAGS: -lolm -lstdc++
 // #include <olm/olm.h>
 // #include <olm/outbound_group_session.h>
+// #include <olm/inbound_group_session.h>
+// #include <olm/megolm.h>
 import "C"
 
 import (
@@ -12,7 +14,7 @@ import (
 )
 
 // Version returns the version number of the olm library.
-func Version() (major, minor, patch byte) {
+func Version() (major, minor, patch uint8) {
 	C.olm_get_library_version(
 		(*C.uint8_t)(&major),
 		(*C.uint8_t)(&minor),
@@ -20,8 +22,8 @@ func Version() (major, minor, patch byte) {
 	return
 }
 
-// Error returns the value that olm functions return if there was an error.
-func Error() C.size_t {
+// errorVal returns the value that olm functions return if there was an error.
+func errorVal() C.size_t {
 	return C.olm_error()
 }
 
@@ -42,7 +44,7 @@ func (s *Session) lastError() error {
 // Clear clears the memory used to back this Session.
 func (s *Session) Clear() error {
 	r := C.olm_clear_session((*C.OlmSession)(s))
-	if r == Error() {
+	if r == errorVal() {
 		return s.lastError()
 	} else {
 		return nil
@@ -92,9 +94,9 @@ func (s *Session) decryptMaxPlaintextLen(message string, msgType MsgType) (uint,
 	r := C.olm_decrypt_max_plaintext_length(
 		(*C.OlmSession)(s),
 		C.size_t(msgType),
-		unsafe.Pointer(&([]byte(message))[0]),
+		unsafe.Pointer(C.CString(message)),
 		C.size_t(len(message)))
-	if r == Error() {
+	if r == errorVal() {
 		return 0, s.lastError()
 	} else {
 		return uint(r), nil
@@ -115,7 +117,7 @@ func (s *Session) Pickle(key []byte) string {
 		C.size_t(len(key)),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(pickled)
@@ -130,7 +132,7 @@ func (s *Session) ID() string {
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&id[0]),
 		C.size_t(len(id)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(id)
@@ -167,7 +169,7 @@ func (s *Session) MatchesInboundSession(oneTimeKeyMsg string) (bool, error) {
 		return true, nil
 	} else if r == 0 {
 		return false, nil
-	} else { // if r == Error()
+	} else { // if r == errorVal()
 		return false, s.lastError()
 	}
 }
@@ -194,7 +196,7 @@ func (s *Session) MatchesInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg stri
 		return true, nil
 	} else if r == 0 {
 		return false, nil
-	} else { // if r == Error()
+	} else { // if r == errorVal()
 		return false, s.lastError()
 	}
 }
@@ -244,7 +246,7 @@ func (s *Session) Encrypt(plaintext string) (MsgType, string) {
 		C.size_t(len(random)),
 		unsafe.Pointer(&([]byte(message))[0]),
 		C.size_t(len(message)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return messageType, string(message)
@@ -274,7 +276,7 @@ func (s *Session) Decrypt(message string, msgType MsgType) (string, error) {
 		C.size_t(len(message)),
 		unsafe.Pointer(&([]byte(plaintext))[0]),
 		C.size_t(len(plaintext)))
-	if r == Error() {
+	if r == errorVal() {
 		return "", s.lastError()
 	} else {
 		return string(plaintext), nil
@@ -300,7 +302,7 @@ func SessionFromPickled(pickled string, key []byte) (*Session, error) {
 		C.size_t(len(key)),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -330,7 +332,7 @@ func (a *Account) lastError() error {
 // Clear clears the memory used to back this Account.
 func (a *Account) Clear() error {
 	r := C.olm_clear_account((*C.OlmAccount)(a))
-	if r == Error() {
+	if r == errorVal() {
 		return a.lastError()
 	} else {
 		return nil
@@ -386,7 +388,7 @@ func (a *Account) Pickle(key []byte) string {
 		C.size_t(len(key)),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	} else {
 		return string(pickled)
@@ -412,7 +414,7 @@ func AccountFromPickled(pickled string, key []byte) (*Account, error) {
 		C.size_t(len(key)),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, a.lastError()
 	} else {
 		return a, nil
@@ -437,7 +439,7 @@ func NewAccount() *Account {
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	} else {
 		return a
@@ -451,7 +453,7 @@ func (a *Account) IdentityKeys() string {
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&identityKeys[0]),
 		C.size_t(len(identityKeys)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	} else {
 		return string(identityKeys)
@@ -471,7 +473,7 @@ func (a *Account) Sign(message string) string {
 		C.size_t(len(message)),
 		unsafe.Pointer(&signature[0]),
 		C.size_t(len(signature)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	} else {
 		return string(signature)
@@ -496,7 +498,7 @@ func (a *Account) OneTimeKeys() string {
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&oneTimeKeys[0]),
 		C.size_t(len(oneTimeKeys)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	} else {
 		return string(oneTimeKeys)
@@ -529,7 +531,7 @@ func (a *Account) GenOneTimeKeys(num uint) {
 		C.size_t(num),
 		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(a.lastError())
 	}
 }
@@ -556,7 +558,7 @@ func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (
 		C.size_t(len(theirOneTimeKey)),
 		unsafe.Pointer(&random[0]),
 		C.size_t(len(random)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -580,7 +582,7 @@ func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&([]byte(oneTimeKeyMsg)[0])),
 		C.size_t(len(oneTimeKeyMsg)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -606,7 +608,7 @@ func (a *Account) NewInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) 
 		C.size_t(len(theirIdentityKey)),
 		unsafe.Pointer(&([]byte(oneTimeKeyMsg)[0])),
 		C.size_t(len(oneTimeKeyMsg)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -620,7 +622,7 @@ func (a *Account) RemoveOneTimeKeys(s *Session) error {
 	r := C.olm_remove_one_time_keys(
 		(*C.OlmAccount)(a),
 		(*C.OlmSession)(s))
-	if r == Error() {
+	if r == errorVal() {
 		return a.lastError()
 	} else {
 		return nil
@@ -650,7 +652,7 @@ func (u *Utility) lastError() error {
 // Clear clears the memory used to back this utility.
 func (u *Utility) Clear() error {
 	r := C.olm_clear_utility((*C.OlmUtility)(u))
-	if r == Error() {
+	if r == errorVal() {
 		return u.lastError()
 	} else {
 		return nil
@@ -676,7 +678,7 @@ func (u *Utility) Sha256(input string) string {
 		C.size_t(len(input)),
 		unsafe.Pointer(&([]byte(output)[0])),
 		C.size_t(len(output)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(u.lastError())
 	} else {
 		return string(output)
@@ -698,7 +700,7 @@ func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
 		C.size_t(len(message)),
 		unsafe.Pointer(&([]byte(signature)[0])),
 		C.size_t(len(signature)))
-	if r == Error() {
+	if r == errorVal() {
 		err := u.lastError()
 		if err.Error() == "BAD_MESSAGE_MAC" {
 			return false, nil
@@ -735,7 +737,7 @@ func (s *OutboundGroupSession) lastError() error {
 // Clear clears the memory used to back this OutboundGroupSession.
 func (s *OutboundGroupSession) Clear() error {
 	r := C.olm_clear_outbound_group_session((*C.OlmOutboundGroupSession)(s))
-	if r == Error() {
+	if r == errorVal() {
 		return s.lastError()
 	} else {
 		return nil
@@ -762,7 +764,7 @@ func (s *OutboundGroupSession) Pickle(key []byte) string {
 		C.size_t(len(key)),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(pickled)
@@ -788,7 +790,7 @@ func OutboundGroupSessionFromPickled(pickled string, key []byte) (*OutboundGroup
 		C.size_t(len(key)),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -813,7 +815,7 @@ func NewOutboundGroupSession() *OutboundGroupSession {
 		(*C.OlmOutboundGroupSession)(s),
 		(*C.uint8_t)(&random[0]),
 		C.size_t(len(random)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return s
@@ -839,7 +841,7 @@ func (s *OutboundGroupSession) Encrypt(plaintext string) string {
 		C.size_t(len(plaintext)),
 		(*C.uint8_t)(&([]byte(message))[0]),
 		C.size_t(len(message)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(message)
@@ -858,7 +860,7 @@ func (s *OutboundGroupSession) SessionId() string {
 		(*C.OlmOutboundGroupSession)(s),
 		(*C.uint8_t)(&sessionId[0]),
 		C.size_t(len(sessionId)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(sessionId)
@@ -883,7 +885,7 @@ func (s *OutboundGroupSession) SessionKey() string {
 		(*C.OlmOutboundGroupSession)(s),
 		(*C.uint8_t)(&sessionKey[0]),
 		C.size_t(len(sessionKey)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(sessionKey)
@@ -915,7 +917,7 @@ func (s *InboundGroupSession) lastError() error {
 // Clear clears the memory used to back this InboundGroupSession.
 func (s *InboundGroupSession) Clear() error {
 	r := C.olm_clear_inbound_group_session((*C.OlmInboundGroupSession)(s))
-	if r == Error() {
+	if r == errorVal() {
 		return s.lastError()
 	} else {
 		return nil
@@ -942,7 +944,7 @@ func (s *InboundGroupSession) Pickle(key []byte) string {
 		C.size_t(len(key)),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(pickled)
@@ -968,7 +970,7 @@ func InboundGroupSessionFromPickled(pickled string, key []byte) (*InboundGroupSe
 		C.size_t(len(key)),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -989,7 +991,7 @@ func NewInboundGroupSession(sessionKey []byte) (*InboundGroupSession, error) {
 		(*C.OlmInboundGroupSession)(s),
 		(*C.uint8_t)(&sessionKey[0]),
 		C.size_t(len(sessionKey)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -1009,7 +1011,7 @@ func InboundGroupSessionImport(sessionKey []byte) (*InboundGroupSession, error) 
 		(*C.OlmInboundGroupSession)(s),
 		(*C.uint8_t)(&sessionKey[0]),
 		C.size_t(len(sessionKey)))
-	if r == Error() {
+	if r == errorVal() {
 		return nil, s.lastError()
 	} else {
 		return s, nil
@@ -1031,22 +1033,22 @@ func (s *InboundGroupSession) decryptMaxPlaintextLen(message string) (uint, erro
 		(*C.OlmInboundGroupSession)(s),
 		(*C.uint8_t)(&([]byte(message))[0]),
 		C.size_t(len(message)))
-	if r == Error() {
+	if r == errorVal() {
 		return 0, s.lastError()
 	} else {
 		return uint(r), nil
 	}
 }
 
-// Decrypt decrypts a message using the InboundGroupSession.  Returns the the plain-text on
-// success.  Returns error on failure.  If the base64 couldn't be decoded then
-// the error will be "INVALID_BASE64".  If the message is for an unsupported
-// version of the protocol then the error will be "BAD_MESSAGE_VERSION".  If
-// the message couldn't be decoded then the error will be BAD_MESSAGE_FORMAT".
-// If the MAC on the message was invalid then the error will be
-// "BAD_MESSAGE_MAC".  If we do not have a session key corresponding to the
-// message's index (ie, it was sent before the session key was shared with
-// us) the error will be "OLM_UNKNOWN_MESSAGE_INDEX".
+// Decrypt decrypts a message using the InboundGroupSession.  Returns the the
+// plain-text and message index on success.  Returns error on failure.  If the
+// base64 couldn't be decoded then the error will be "INVALID_BASE64".  If the
+// message is for an unsupported version of the protocol then the error will be
+// "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then the error
+// will be BAD_MESSAGE_FORMAT".  If the MAC on the message was invalid then the
+// error will be "BAD_MESSAGE_MAC".  If we do not have a session key
+// corresponding to the message's index (ie, it was sent before the session key
+// was shared with us) the error will be "OLM_UNKNOWN_MESSAGE_INDEX".
 func (s *InboundGroupSession) Decrypt(message string) (string, uint32, error) {
 	if len(message) == 0 {
 		return "", 0, fmt.Errorf("Empty input")
@@ -1064,7 +1066,7 @@ func (s *InboundGroupSession) Decrypt(message string) (string, uint32, error) {
 		(*C.uint8_t)(&([]byte(plaintext))[0]),
 		C.size_t(len(plaintext)),
 		(*C.uint32_t)(&messageIndex))
-	if r == Error() {
+	if r == errorVal() {
 		return "", 0, s.lastError()
 	} else {
 		return string(plaintext), messageIndex, nil
@@ -1083,7 +1085,7 @@ func (s *InboundGroupSession) SessionId() string {
 		(*C.OlmInboundGroupSession)(s),
 		(*C.uint8_t)(&sessionId[0]),
 		C.size_t(len(sessionId)))
-	if r == Error() {
+	if r == errorVal() {
 		panic(s.lastError())
 	} else {
 		return string(sessionId)
@@ -1122,9 +1124,34 @@ func (s *InboundGroupSession) Export(messageIndex uint32) (string, error) {
 		(*C.uint8_t)(&key[0]),
 		C.size_t(len(key)),
 		C.uint32_t(messageIndex))
-	if r == Error() {
+	if r == errorVal() {
 		return "", s.lastError()
 	} else {
 		return string(key), nil
 	}
 }
+
+// NOTE: Is the megolm class even used anywhere?
+//
+// // Megolm stores the Megolm multi-part ratchet used in group chats.
+// type Megolm C.Megolm
+//
+// // NewMegolm creates a new Megolm ratchet.
+// func NewMegolm() *Megolm {
+// 	var m Megolm
+// 	random := make([]byte, C.MEGOLM_RATCHET_PART_LENGTH+1)
+// 	_, err := crand.Read(random)
+// 	if err != nil {
+// 		panic("Couldn't get enough randomness from crypto/rand")
+// 	}
+// 	C.megolm_init(
+// 		(*C.Megolm)(&m),
+// 		(*C.uint8_t)(&random[0]),
+// 		(C.uint32_t)(0))
+// 	return &m
+// }
+//
+// // pickleLen returns the number of bytes needed to store a megolm.
+// func (m *Megolm) pickleLen() uint {
+// 	return uint(C.megolm_pickle_length((*C.Megolm)(m)))
+// }
