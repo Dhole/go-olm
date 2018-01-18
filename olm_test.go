@@ -21,7 +21,7 @@ func TestAccount(t *testing.T) {
 	a11 := NewAccount()
 	pickled11 := a11.Pickle([]byte("HELLO"))
 	if pickled1 == pickled11 {
-		t.Error("Two new accounts pickle to the same string")
+		t.Fatal("Two new accounts pickle to the same string")
 	}
 
 	// Load account from pickled account
@@ -34,10 +34,10 @@ func TestAccount(t *testing.T) {
 	t.Log("Pickle():", pickled2)
 	a3, err := AccountFromPickled(pickled2, []byte("HELLO"))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if pickled1 != pickled2 {
-		t.Error("pickle(unpickle(pickle)) != pickle")
+		t.Fatal("pickle(unpickle(pickle)) != pickle")
 	}
 
 	identityKeys := a1.IdentityKeys()
@@ -100,13 +100,13 @@ func TestSession(t *testing.T) {
 	// From account 1, generate an outbout session towards account 2
 	s1, err := a1.NewOutboundSession(a2IdentityKeys.Curve25519, a2OneTimeKey)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	pickled1 := s1.Pickle([]byte("HELLO"))
 	t.Log("Pickle():", pickled1)
 
 	// From account 1, encrypt a message to account 2
-	msg1 := "OLA K ASE"
+	msg1 := "Hello Alan"
 	msgType, encMsg := s1.Encrypt(msg1)
 	t.Log("s1.Encrypt(\"", msg1, "\"):", msgType, encMsg)
 
@@ -125,10 +125,30 @@ func TestSession(t *testing.T) {
 
 	msg2, err := s2.Decrypt(encMsg, msgType)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	t.Log("s1.Decrypt():", msg2)
-	t.Log(s1.Pickle([]byte(" ")))
+
+	if msg1 != msg2 {
+		t.Log([]byte(msg1))
+		t.Log([]byte(msg2))
+		t.Fatalf("s2.Decrypt(s1.Encrypt(\"%s\")) = \"%s\" != \"%s\"", msg1, msg2, msg1)
+	}
+
+	msg3 := "Hello Beth"
+	msgType, encMsg = s2.Encrypt(msg3)
+
+	msg4, err := s1.Decrypt(encMsg, msgType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Log("s2.Decrypt():", msg4)
+
+	if msg3 != msg4 {
+		t.Log([]byte(msg3))
+		t.Log([]byte(msg4))
+		t.Fatalf("s2.Decrypt(s1.Encrypt(\"%s\")) = \"%s\" != \"%s\"", msg3, msg4, msg3)
+	}
 }
 
 func TestUtility(t *testing.T) {
@@ -138,7 +158,7 @@ func TestUtility(t *testing.T) {
 	h := u.Sha256("HELLO")
 	t.Log("Sha256():", h)
 	if h != "NzPNl3/46xi5hzV+Is7Zn0YJfzHssjnoeK5jdg6D5NU" {
-		t.Error("Sha256 doesn't match")
+		t.Fatal("Sha256 doesn't match")
 	}
 
 	// Verify a signed message
@@ -147,7 +167,7 @@ func TestUtility(t *testing.T) {
 	signature := "h6SV3IO8S0sOMyvUvgbQcLaPkP0utyXDFHMrAVoLZl87JG3z8thYo9L1jHusXtP+fXM9NB7E2p06udpmtIPHAQ"
 	ok, err := u.Ed25519Verify(message, key, signature)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if !ok {
 		t.Log("Signature verification shouldn't have failed")
@@ -157,7 +177,7 @@ func TestUtility(t *testing.T) {
 	message = "GOOD BYE"
 	ok, err = u.Ed25519Verify(message, key, signature)
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if ok {
 		t.Log("Signature verification should have failed")

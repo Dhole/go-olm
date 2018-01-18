@@ -106,7 +106,8 @@ func (s *Session) decryptMaxPlaintextLen(message string, msgType MsgType) (uint,
 // Pickle returns a Session as a base64 string.  Encrypts the Session using the
 // supplied key.
 func (s *Session) Pickle(key []byte) string {
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	pickled := make([]byte, s.pickleLen())
@@ -114,13 +115,13 @@ func (s *Session) Pickle(key []byte) string {
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&key[0]),
 		//unsafe.Pointer(key),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(pickled)
+		return string(pickled[:r])
 	}
 }
 
@@ -249,7 +250,7 @@ func (s *Session) Encrypt(plaintext string) (MsgType, string) {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return messageType, string(message)
+		return messageType, string(message[:r])
 	}
 }
 
@@ -279,7 +280,7 @@ func (s *Session) Decrypt(message string, msgType MsgType) (string, error) {
 	if r == errorVal() {
 		return "", s.lastError()
 	} else {
-		return string(plaintext), nil
+		return string(plaintext[:r]), nil
 	}
 }
 
@@ -292,14 +293,15 @@ func SessionFromPickled(pickled string, key []byte) (*Session, error) {
 	if len(pickled) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	s := newSession()
 	r := C.olm_unpickle_session(
 		(*C.OlmSession)(s),
 		unsafe.Pointer(&key[0]),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
@@ -378,20 +380,21 @@ func (a *Account) genOneTimeKeysRandomLen(num uint) uint {
 // Pickle returns an Account as a base64 string. Encrypts the Account using the
 // supplied key.
 func (a *Account) Pickle(key []byte) string {
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	pickled := make([]byte, a.pickleLen())
 	r := C.olm_pickle_account(
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&key[0]),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
 		panic(a.lastError())
 	} else {
-		return string(pickled)
+		return string(pickled[:r])
 	}
 }
 
@@ -404,14 +407,15 @@ func AccountFromPickled(pickled string, key []byte) (*Account, error) {
 	if len(pickled) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	a := newAccount()
 	r := C.olm_unpickle_account(
 		(*C.OlmAccount)(a),
 		unsafe.Pointer(&key[0]),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
@@ -753,7 +757,8 @@ func (s *OutboundGroupSession) pickleLen() uint {
 // Pickle returns an OutboundGroupSession as a base64 string.  Encrypts the
 // OutboundGroupSession using the supplied key.
 func (s *OutboundGroupSession) Pickle(key []byte) string {
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	pickled := make([]byte, s.pickleLen())
@@ -761,13 +766,13 @@ func (s *OutboundGroupSession) Pickle(key []byte) string {
 		(*C.OlmOutboundGroupSession)(s),
 		unsafe.Pointer(&key[0]),
 		//unsafe.Pointer(key),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(pickled)
+		return string(pickled[:r])
 	}
 }
 
@@ -780,14 +785,15 @@ func OutboundGroupSessionFromPickled(pickled string, key []byte) (*OutboundGroup
 	if len(pickled) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	s := newOutboundGroupSession()
 	r := C.olm_unpickle_outbound_group_session(
 		(*C.OlmOutboundGroupSession)(s),
 		unsafe.Pointer(&key[0]),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
@@ -844,7 +850,7 @@ func (s *OutboundGroupSession) Encrypt(plaintext string) string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(message)
+		return string(message[:r])
 	}
 }
 
@@ -863,7 +869,7 @@ func (s *OutboundGroupSession) SessionId() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(sessionId)
+		return string(sessionId[:r])
 	}
 }
 
@@ -888,7 +894,7 @@ func (s *OutboundGroupSession) SessionKey() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(sessionKey)
+		return string(sessionKey[:r])
 	}
 }
 
@@ -933,7 +939,8 @@ func (s *InboundGroupSession) pickleLen() uint {
 // Pickle returns an InboundGroupSession as a base64 string.  Encrypts the
 // InboundGroupSession using the supplied key.
 func (s *InboundGroupSession) Pickle(key []byte) string {
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	pickled := make([]byte, s.pickleLen())
@@ -941,13 +948,13 @@ func (s *InboundGroupSession) Pickle(key []byte) string {
 		(*C.OlmInboundGroupSession)(s),
 		unsafe.Pointer(&key[0]),
 		//unsafe.Pointer(key),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&pickled[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(pickled)
+		return string(pickled[:r])
 	}
 }
 
@@ -960,14 +967,15 @@ func InboundGroupSessionFromPickled(pickled string, key []byte) (*InboundGroupSe
 	if len(pickled) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}
-	if len(key) == 0 {
+	lenKey := len(key)
+	if lenKey == 0 {
 		key = []byte(" ")
 	}
 	s := newInboundGroupSession()
 	r := C.olm_unpickle_inbound_group_session(
 		(*C.OlmInboundGroupSession)(s),
 		unsafe.Pointer(&key[0]),
-		C.size_t(len(key)),
+		C.size_t(lenKey),
 		unsafe.Pointer(&([]byte(pickled))[0]),
 		C.size_t(len(pickled)))
 	if r == errorVal() {
@@ -1069,7 +1077,7 @@ func (s *InboundGroupSession) Decrypt(message string) (string, uint32, error) {
 	if r == errorVal() {
 		return "", 0, s.lastError()
 	} else {
-		return string(plaintext), messageIndex, nil
+		return string(plaintext[:r]), messageIndex, nil
 	}
 }
 
@@ -1088,7 +1096,7 @@ func (s *InboundGroupSession) SessionId() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(sessionId)
+		return string(sessionId[:r])
 	}
 }
 
@@ -1127,7 +1135,7 @@ func (s *InboundGroupSession) Export(messageIndex uint32) (string, error) {
 	if r == errorVal() {
 		return "", s.lastError()
 	} else {
-		return string(key), nil
+		return string(key[:r]), nil
 	}
 }
 
