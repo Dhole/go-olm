@@ -9,6 +9,7 @@ import "C"
 
 import (
 	crand "crypto/rand"
+	"encoding/json"
 	"fmt"
 	"unsafe"
 )
@@ -450,8 +451,8 @@ func NewAccount() *Account {
 	}
 }
 
-// IdentityKeys returns the public parts of the identity keys for the Account.
-func (a *Account) IdentityKeys() string {
+// IdentityKeysJSON returns the public parts of the identity keys for the Account.
+func (a *Account) IdentityKeysJSON() string {
 	identityKeys := make([]byte, a.identityKeysLen())
 	r := C.olm_account_identity_keys(
 		(*C.OlmAccount)(a),
@@ -462,6 +463,18 @@ func (a *Account) IdentityKeys() string {
 	} else {
 		return string(identityKeys)
 	}
+}
+
+// IdentityKeysEd25519Curve25519 returns the public parts of the identity keys
+// for the Account as (ed25519, curve25519).
+func (a *Account) IdentityKeysEd25519Curve25519() (string, string) {
+	identityKeysJSON := a.IdentityKeysJSON()
+	identityKeys := map[string]string{}
+	err := json.Unmarshal([]byte(identityKeysJSON), &identityKeys)
+	if err != nil {
+		panic(err)
+	}
+	return identityKeys["ed25519"], identityKeys["curve25519"]
 }
 
 // Sign returns the signature of a message using the ed25519 key for this
@@ -541,8 +554,8 @@ func (a *Account) GenOneTimeKeys(num uint) {
 }
 
 // NewOutboundSession creates a new out-bound session for sending messages to a
-// given identityKey and oneTimeKey.  Returns error on failure.  If the keys
-// couldn't be decoded as base64 then the error will be "INVALID_BASE64"
+// given curve25519 identityKey and oneTimeKey.  Returns error on failure.  If the
+// keys couldn't be decoded as base64 then the error will be "INVALID_BASE64"
 func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (*Session, error) {
 	if len(theirIdentityKey) == 0 || len(theirOneTimeKey) == 0 {
 		return nil, fmt.Errorf("Empty input")
@@ -859,8 +872,8 @@ func (s *OutboundGroupSession) sessionIdLen() uint {
 	return uint(C.olm_outbound_group_session_id_length((*C.OlmOutboundGroupSession)(s)))
 }
 
-// SessionId returns a base64-encoded identifier for this session.
-func (s *OutboundGroupSession) SessionId() string {
+// ID returns a base64-encoded identifier for this session.
+func (s *OutboundGroupSession) ID() string {
 	sessionId := make([]byte, s.sessionIdLen())
 	r := C.olm_outbound_group_session_id(
 		(*C.OlmOutboundGroupSession)(s),
@@ -1086,8 +1099,8 @@ func (s *InboundGroupSession) sessionIdLen() uint {
 	return uint(C.olm_inbound_group_session_id_length((*C.OlmInboundGroupSession)(s)))
 }
 
-// SessionId returns a base64-encoded identifier for this session.
-func (s *InboundGroupSession) SessionId() string {
+// ID returns a base64-encoded identifier for this session.
+func (s *InboundGroupSession) ID() string {
 	sessionId := make([]byte, s.sessionIdLen())
 	r := C.olm_inbound_group_session_id(
 		(*C.OlmInboundGroupSession)(s),
