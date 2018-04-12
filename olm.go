@@ -1,6 +1,7 @@
 package olm
 
-// #cgo LDFLAGS: -lolm -lstdc++
+// #cgo LDFLAGS: -lolm -lstdc++ -L/home/dev/git/olm/build/
+// #cgo CFLAGS: -I/home/dev/git/olm/include/
 // #include <olm/olm.h>
 // #include <olm/outbound_group_session.h>
 // #include <olm/inbound_group_session.h>
@@ -11,6 +12,7 @@ import (
 	crand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/structs"
 	"unsafe"
 )
 
@@ -497,6 +499,44 @@ func (a *Account) Sign(message string) string {
 	}
 }
 
+func (a *Account) SignJSON(_obj interface{}, userID, deviceID string) (interface{}, error) {
+	obj := structs.Map(_obj)
+	_signatures, ok := obj["signatures"]
+	if ok {
+		delete(obj, "signatures")
+	}
+	signatures, ok := _signatures.(map[string]map[string]string)
+	if !ok {
+		return nil, fmt.Errorf("signatures key of JSON object is an invalid type")
+	}
+	if signatures == nil {
+		signatures = make(map[string]map[string]string)
+	}
+	unsigned, ok := obj["unsigned"]
+	if ok {
+		delete(obj, "unsigned")
+	}
+	objJSON, err := json.Marshal(obj)
+	if err != nil {
+		return nil, err
+	}
+	//fmt.Printf("\n\n%v\n\n", obj)
+	//fmt.Printf("\n\n%v\n\n", string(objJSON))
+	signature := a.Sign(string(objJSON))
+	keyID := fmt.Sprintf("ed25519:%s", deviceID)
+	signatures[userID] = map[string]string{keyID: signature}
+	obj["signatures"] = signatures
+	if unsigned != nil {
+		obj["unsigned"] = unsigned
+	}
+
+	return obj, nil
+}
+
+type OTKs struct {
+	Curve25519 map[string]string `json:"curve25519"`
+}
+
 // OneTimeKeys returns the public parts of the unpublished one time keys for
 // the Account.
 //
@@ -509,16 +549,21 @@ func (a *Account) Sign(message string) string {
 // 	        "AAAAAB": "LRvjo46L1X2vx69sS9QNFD29HWulxrmW11Up5AfAjgU"
 // 	    }
 // 	}
-func (a *Account) OneTimeKeys() string {
-	oneTimeKeys := make([]byte, a.oneTimeKeysLen())
+func (a *Account) OneTimeKeys() OTKs {
+	oneTimeKeysJSON := make([]byte, a.oneTimeKeysLen())
 	r := C.olm_account_one_time_keys(
 		(*C.OlmAccount)(a),
-		unsafe.Pointer(&oneTimeKeys[0]),
-		C.size_t(len(oneTimeKeys)))
+		unsafe.Pointer(&oneTimeKeysJSON[0]),
+		C.size_t(len(oneTimeKeysJSON)))
 	if r == errorVal() {
 		panic(a.lastError())
 	} else {
-		return string(oneTimeKeys)
+		var oneTimeKeys OTKs
+		err := json.Unmarshal(oneTimeKeysJSON, &oneTimeKeys)
+		if err != nil {
+			panic(err)
+		}
+		return oneTimeKeys
 	}
 }
 
