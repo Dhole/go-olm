@@ -16,6 +16,12 @@ import (
 	"unsafe"
 )
 
+// Ed25519 is the base64 representation of an Ed25519 public key
+type Ed25519 string
+
+// Curve25519 is the base64 representation of an Curve25519 public key
+type Curve25519 string
+
 // Version returns the version number of the olm library.
 func Version() (major, minor, patch uint8) {
 	C.olm_get_library_version(
@@ -467,16 +473,16 @@ func (a *Account) IdentityKeysJSON() string {
 	}
 }
 
-// IdentityKeysEd25519Curve25519 returns the public parts of the identity keys
-// for the Account as (ed25519, curve25519).
-func (a *Account) IdentityKeysEd25519Curve25519() (string, string) {
+// IdentityKeys returns the public parts of the Ed25519 and Curve25519 identity
+// keys for the Account.
+func (a *Account) IdentityKeys() (Ed25519, Curve25519) {
 	identityKeysJSON := a.IdentityKeysJSON()
 	identityKeys := map[string]string{}
 	err := json.Unmarshal([]byte(identityKeysJSON), &identityKeys)
 	if err != nil {
 		panic(err)
 	}
-	return identityKeys["ed25519"], identityKeys["curve25519"]
+	return Ed25519(identityKeys["ed25519"]), Curve25519(identityKeys["curve25519"])
 }
 
 // Sign returns the signature of a message using the ed25519 key for this
@@ -534,7 +540,7 @@ func (a *Account) SignJSON(_obj interface{}, userID, deviceID string) (interface
 }
 
 type OTKs struct {
-	Curve25519 map[string]string `json:"curve25519"`
+	Curve25519 map[string]Curve25519 `json:"curve25519"`
 }
 
 // OneTimeKeys returns the public parts of the unpublished one time keys for
@@ -601,7 +607,7 @@ func (a *Account) GenOneTimeKeys(num uint) {
 // NewOutboundSession creates a new out-bound session for sending messages to a
 // given curve25519 identityKey and oneTimeKey.  Returns error on failure.  If the
 // keys couldn't be decoded as base64 then the error will be "INVALID_BASE64"
-func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey string) (*Session, error) {
+func (a *Account) NewOutboundSession(theirIdentityKey, theirOneTimeKey Curve25519) (*Session, error) {
 	if len(theirIdentityKey) == 0 || len(theirOneTimeKey) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}
@@ -658,7 +664,7 @@ func (a *Account) NewInboundSession(oneTimeKeyMsg string) (*Session, error) {
 // "BAD_MESSAGE_VERSION".  If the message couldn't be decoded then then the
 // error will be "BAD_MESSAGE_FORMAT".  If the message refers to an unknown one
 // time key then the error will be "BAD_MESSAGE_KEY_ID".
-func (a *Account) NewInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg string) (*Session, error) {
+func (a *Account) NewInboundSessionFrom(theirIdentityKey Curve25519, oneTimeKeyMsg string) (*Session, error) {
 	if len(theirIdentityKey) == 0 || len(oneTimeKeyMsg) == 0 {
 		return nil, fmt.Errorf("Empty input")
 	}

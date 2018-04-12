@@ -2,9 +2,9 @@ package olm
 
 import "testing"
 
-import (
-	"encoding/json"
-)
+//import (
+//	"encoding/json"
+//)
 
 func TestOlm(t *testing.T) {
 	major, minor, patch := Version()
@@ -40,7 +40,7 @@ func TestAccount(t *testing.T) {
 		t.Fatal("pickle(unpickle(pickle)) != pickle")
 	}
 
-	identityKeys := a1.IdentityKeys()
+	identityKeys := a1.IdentityKeysJSON()
 	t.Log("IdentityKeys():", identityKeys)
 
 	// Sign a message
@@ -61,14 +61,14 @@ func TestAccount(t *testing.T) {
 	t.Log("a3.Clear():", a3.Clear())
 }
 
-type OneTimeKeys struct {
-	Curve25519 map[string]string `json:"curve25519"`
-}
+//type OneTimeKeys struct {
+//	Curve25519 map[string]string `json:"curve25519"`
+//}
 
-type IdentityKeys struct {
-	Curve25519 string `json:"curve25519"`
-	Ed25519    string `json:"ed25519"`
-}
+//type IdentityKeys struct {
+//	Curve25519 string `json:"curve25519"`
+//	Ed25519    string `json:"ed25519"`
+//}
 
 func TestSession(t *testing.T) {
 	// Generate new accounts
@@ -77,28 +77,22 @@ func TestSession(t *testing.T) {
 
 	// Generate one time keys for account 2, and get one of them
 	a2.GenOneTimeKeys(a2.MaxNumberOfOneTimeKeys())
-	a2OneTimeKeysJSON := a2.OneTimeKeys()
-	var a2OneTimeKeys OneTimeKeys
-	json.Unmarshal([]byte(a2OneTimeKeysJSON), &a2OneTimeKeys)
-	//t.Log("Marshaled:", a2OneTimeKeysJSON)
-	//t.Logf("Unmarshaled: %+v", a2OneTimeKeys)
+	a2OTKs := a2.OneTimeKeys()
+
 	// Pick one One Time Key
-	var a2OneTimeKey string
-	for _, v := range a2OneTimeKeys.Curve25519 {
-		a2OneTimeKey = v
+	var a2OTK Curve25519
+	for _, v := range a2OTKs.Curve25519 {
+		a2OTK = v
 		break
 	}
 
 	// Get identity key of account 2
-	a2IdentityKeysJSON := a2.IdentityKeys()
-	var a2IdentityKeys IdentityKeys
-	json.Unmarshal([]byte(a2IdentityKeysJSON), &a2IdentityKeys)
-	t.Log("a2IdentityKeysJSON:", a2IdentityKeysJSON)
-	t.Log("a2IdentityKeys:", a2IdentityKeys)
-	t.Log("a2OneTimeKey:", a2OneTimeKey)
+	a2Ed25519, a2Curve25519 := a2.IdentityKeys()
+	t.Log("a2IdentityKeys: Ed25519 =", a2Ed25519, ", Curve25519 =", a2Curve25519)
+	t.Log("a2OTK:", a2OTK)
 
 	// From account 1, generate an outbout session towards account 2
-	s1, err := a1.NewOutboundSession(a2IdentityKeys.Curve25519, a2OneTimeKey)
+	s1, err := a1.NewOutboundSession(a2Curve25519, a2OTK)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,13 +105,10 @@ func TestSession(t *testing.T) {
 	t.Log("s1.Encrypt(\"", msg1, "\"):", msgType, encMsg)
 
 	// Get identity key of account 1
-	a1IdentityKeysJSON := a1.IdentityKeys()
-	var a1IdentityKeys IdentityKeys
-	json.Unmarshal([]byte(a1IdentityKeysJSON), &a1IdentityKeys)
-	t.Log("a1IdentityKeysJSON:", a1IdentityKeysJSON)
-	t.Log("a1IdentityKeys:", a1IdentityKeys)
+	a1Ed25519, a1Curve25519 := a1.IdentityKeys()
+	t.Log("a1IdentityKeys: Ed25519 =", a1Ed25519, ", Curve25519 =", a1Curve25519)
 
-	s2, err := a2.NewInboundSessionFrom(a1IdentityKeys.Curve25519, encMsg)
+	s2, err := a2.NewInboundSessionFrom(a1Curve25519, encMsg)
 	//s2, err := a2.NewInboundSession(encMsg)
 	if err != nil {
 		t.Fatal(err)
