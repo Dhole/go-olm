@@ -546,11 +546,11 @@ type OTKs struct {
 // OneTimeKeys returns the public parts of the unpublished one time keys for
 // the Account.
 //
-// The returned data is a JSON-formatted object with the single property
-// "curve25519", which is itself an object mapping key id to base64-encoded
-// Curve25519 key.  For example:
+// The returned data is a struct with the single value "Curve25519", which is
+// itself an object mapping key id to base64-encoded Curve25519 key.  For
+// example:
 // 	{
-// 	    curve25519: {
+// 	    Curve25519: {
 // 	        "AAAAAA": "wo76WcYtb0Vk/pBOdmduiGJ0wIEjW4IBMbbQn7aSnTo",
 // 	        "AAAAAB": "LRvjo46L1X2vx69sS9QNFD29HWulxrmW11Up5AfAjgU"
 // 	    }

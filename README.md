@@ -1,4 +1,6 @@
-# Go olm/megolm bindings
+# Go olm/megolm bindings [![GoDoc](https://godoc.org/github.com/Dhole/go-olm?status.svg)](https://godoc.org/github.com/Dhole/go-olm)
+
+
 
 Work In Progress.
 
