@@ -16,6 +16,9 @@ import (
 	"unsafe"
 )
 
+// SessionID is the identifier of an Olm/Megolm session
+type SessionID string
+
 // Ed25519 is the base64 representation of an Ed25519 public key
 type Ed25519 string
 
@@ -136,7 +139,7 @@ func (s *Session) Pickle(key []byte) string {
 
 // Id returns an identifier for this Session.  Will be the same for both ends
 // of the conversation.
-func (s *Session) ID() string {
+func (s *Session) ID() SessionID {
 	id := make([]byte, s.idLen())
 	r := C.olm_session_id(
 		(*C.OlmSession)(s),
@@ -145,7 +148,7 @@ func (s *Session) ID() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(id)
+		return SessionID(id)
 	}
 }
 
@@ -210,6 +213,13 @@ func (s *Session) MatchesInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg stri
 		return false, s.lastError()
 	}
 }
+
+type Algorithm string
+
+const (
+	AlgorithmOlmV1    Algorithm = "m.olm.v1.curve25519-aes-sha2"
+	AlgorithmMegolmV1 Algorithm = "m.megolm.v1.aes-sha2"
+)
 
 type MsgType uint
 
@@ -924,7 +934,7 @@ func (s *OutboundGroupSession) sessionIdLen() uint {
 }
 
 // ID returns a base64-encoded identifier for this session.
-func (s *OutboundGroupSession) ID() string {
+func (s *OutboundGroupSession) ID() SessionID {
 	sessionId := make([]byte, s.sessionIdLen())
 	r := C.olm_outbound_group_session_id(
 		(*C.OlmOutboundGroupSession)(s),
@@ -933,7 +943,7 @@ func (s *OutboundGroupSession) ID() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(sessionId[:r])
+		return SessionID(sessionId[:r])
 	}
 }
 
@@ -1151,7 +1161,7 @@ func (s *InboundGroupSession) sessionIdLen() uint {
 }
 
 // ID returns a base64-encoded identifier for this session.
-func (s *InboundGroupSession) ID() string {
+func (s *InboundGroupSession) ID() SessionID {
 	sessionId := make([]byte, s.sessionIdLen())
 	r := C.olm_inbound_group_session_id(
 		(*C.OlmInboundGroupSession)(s),
@@ -1160,7 +1170,7 @@ func (s *InboundGroupSession) ID() string {
 	if r == errorVal() {
 		panic(s.lastError())
 	} else {
-		return string(sessionId[:r])
+		return SessionID(sessionId[:r])
 	}
 }
 
