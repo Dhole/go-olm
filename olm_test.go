@@ -154,9 +154,9 @@ func TestUtility(t *testing.T) {
 
 	// Verify a signed message
 	message := "HELLO WORLD"
-	key := "TdbnI8JjtbJW1h9dISHcZ7LTpMYIjKFiEBfKp8hxCeI"
+	key := Ed25519("TdbnI8JjtbJW1h9dISHcZ7LTpMYIjKFiEBfKp8hxCeI")
 	signature := "h6SV3IO8S0sOMyvUvgbQcLaPkP0utyXDFHMrAVoLZl87JG3z8thYo9L1jHusXtP+fXM9NB7E2p06udpmtIPHAQ"
-	ok, err := u.Ed25519Verify(message, key, signature)
+	ok, err := u.VerifySignature(message, key, signature)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestUtility(t *testing.T) {
 
 	// Verify an incorrect signed message
 	message = "GOOD BYE"
-	ok, err = u.Ed25519Verify(message, key, signature)
+	ok, err = u.VerifySignature(message, key, signature)
 	if err != nil {
 		t.Fatal(err)
 	}

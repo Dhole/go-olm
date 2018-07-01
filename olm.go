@@ -16,6 +16,10 @@ import (
 	"unsafe"
 )
 
+// Signatures is the data structure used to sign JSON objects.  It maps from
+// userID to a map from <algorithm:deviceID> to signature.
+type Signatures map[string]map[string]string
+
 // SessionID is the identifier of an Olm/Megolm session
 type SessionID string
 
@@ -217,6 +221,7 @@ func (s *Session) MatchesInboundSessionFrom(theirIdentityKey, oneTimeKeyMsg stri
 type Algorithm string
 
 const (
+	AlgorithmNone     Algorithm = ""
 	AlgorithmOlmV1    Algorithm = "m.olm.v1.curve25519-aes-sha2"
 	AlgorithmMegolmV1 Algorithm = "m.megolm.v1.aes-sha2"
 )
@@ -515,13 +520,18 @@ func (a *Account) Sign(message string) string {
 	}
 }
 
+// SignJSON signs the JSON object _obj following the Matrix specification:
+// https://matrix.org/speculator/spec/drafts%2Fe2e/appendices.html#signing-json
+// If the _obj is a struct, the `json` tags will be honored.
 func (a *Account) SignJSON(_obj interface{}, userID, deviceID string) (interface{}, error) {
-	obj := structs.Map(_obj)
+	s := structs.New(_obj)
+	s.TagName = "json"
+	obj := s.Map()
 	_signatures, ok := obj["signatures"]
 	if ok {
 		delete(obj, "signatures")
 	}
-	signatures, ok := _signatures.(map[string]map[string]string)
+	signatures, ok := _signatures.(Signatures)
 	if !ok {
 		return nil, fmt.Errorf("signatures key of JSON object is an invalid type")
 	}
@@ -539,8 +549,8 @@ func (a *Account) SignJSON(_obj interface{}, userID, deviceID string) (interface
 	//fmt.Printf("\n\n%v\n\n", obj)
 	//fmt.Printf("\n\n%v\n\n", string(objJSON))
 	signature := a.Sign(string(objJSON))
-	keyID := fmt.Sprintf("ed25519:%s", deviceID)
-	signatures[userID] = map[string]string{keyID: signature}
+	algorithmDeviceID := fmt.Sprintf("ed25519:%s", deviceID)
+	signatures[userID] = map[string]string{algorithmDeviceID: signature}
 	obj["signatures"] = signatures
 	if unsigned != nil {
 		obj["unsigned"] = unsigned
@@ -707,7 +717,7 @@ func (a *Account) RemoveOneTimeKeys(s *Session) error {
 	}
 }
 
-// Session stores the necessary state to perform hash and signature
+// Utility stores the necessary state to perform hash and signature
 // verification operations.
 type Utility C.OlmUtility
 
@@ -763,10 +773,10 @@ func (u *Utility) Sha256(input string) string {
 	}
 }
 
-// Ed25519 verifies an ed25519 signature.  Returns true if the verification
+// VerifySignature verifies an ed25519 signature.  Returns true if the verification
 // suceeds or false otherwise.  Returns error on failure.  If the key was too
 // small then the error will be "INVALID_BASE64".
-func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
+func (u *Utility) VerifySignature(message string, key Ed25519, signature string) (bool, error) {
 	if len(message) == 0 || len(key) == 0 || len(signature) == 0 {
 		return false, fmt.Errorf("Empty input")
 	}
@@ -788,6 +798,50 @@ func (u *Utility) Ed25519Verify(message, key, signature string) (bool, error) {
 	} else {
 		return true, nil
 	}
+}
+
+// VerifySignatureJSON verifies the signature in the JSON object _obj following
+// the Matrix specification:
+// https://matrix.org/speculator/spec/drafts%2Fe2e/appendices.html#signing-json
+// If the _obj is a struct, the `json` tags will be honored.
+func (u *Utility) VerifySignatureJSON(_obj interface{}, userID, deviceID string, key Ed25519) (bool, error) {
+	s := structs.New(_obj)
+	s.TagName = "json"
+	obj := s.Map()
+	_signatures, ok := obj["signatures"]
+	if !ok {
+		return false, fmt.Errorf("JSON object doesn't contain signatures key")
+	}
+	signatures, ok := _signatures.(map[string]map[string]string)
+	if !ok {
+		return false, fmt.Errorf("signatures key of JSON object is an invalid type")
+	}
+	signatureDevices, ok := signatures[userID]
+	if !ok {
+		return false, fmt.Errorf("JSON object isn't signed by user %s", userID)
+	}
+	signature, ok := signatureDevices[fmt.Sprintf("ed25519:%s", deviceID)]
+	if !ok {
+		return false, fmt.Errorf("JSON object isn't signed by user's device %s", deviceID)
+	}
+	delete(obj, "unsigned")
+	objJSON, err := json.Marshal(obj)
+	if err != nil {
+		return false, err
+	}
+	return u.VerifySignature(string(objJSON), key, signature)
+}
+
+// VerifySignatureJSON verifies the signature in the JSON object _obj following
+// the Matrix specification:
+// https://matrix.org/speculator/spec/drafts%2Fe2e/appendices.html#signing-json
+// This function is a wrapper over Utility.VerifySignatureJSON that creates and
+// destroys the Utility object transparently.
+// If the _obj is a struct, the `json` tags will be honored.
+func VerifySignatureJSON(_obj interface{}, userID, deviceID string, key Ed25519) (bool, error) {
+	u := NewUtility()
+	defer u.Clear()
+	return u.VerifySignatureJSON(_obj, userID, deviceID, key)
 }
 
 // OutboundGroupSession stores an outbound encrypted messaging session for a
