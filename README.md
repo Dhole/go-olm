@@ -8,3 +8,7 @@ All original library functions exposed and documented.
 
 Unstable API for now, as I'm figuring out the best way to use the functions
 from the point of view of a matrix chat client.
+
+# License
+
+Published under Apache License Version 2.0 (see [LICENSE](./LICENSE)).
